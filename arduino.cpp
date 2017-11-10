@@ -52,9 +52,11 @@ char* files[]={"Cld136.raw", "mail136.raw"}; // 320x240
 int picsize_x, picsize_y;
 unsigned long unixTime;
 char* weather, statusIcon;
-int controlsDimLevel;
+int controlsDimLevel, sleepModeDimLevel;
+int controlsDimLevelBeforeStateChange; //dim level before sleep mode or light was turned on
 bool rgbLEDModeCustom[2];
 char rgbLEDColors[2]; //
+bool sleepModeEnabled;
 byte rgbLEDs[7]; //0-5 are RGB1 - RGB2, 6 is the overall LED brightness for single colour LEDs
 byte orange[8][3] = {{255,60,0}, {210,48,0}, {112,31,0}, {58,19,0}, {28,8,0}, {20,5,0}, {10,2,0}, {8,2,0}};
 byte yellow[8][3] = {{255,215,0}, {200,160,0}, {98,80,0}, {60,50,0}, {20,20,0}, {10,10,0}, {5,5,0}, {2,2,0}};
@@ -139,15 +141,33 @@ void readSwSer() {
 }
 */
 
+void toggleSleepMode() {
+  if(!sleepModeEnabled) { //enable sleep mode
+    controlsDimLevelBeforeStateChange = controlsDimLevel;
+    controlsDimLevel = sleepModeDimLevel;
+    applyControlsBrightness();
+  }
+  else  {
+    controlsDimLevel = controlsDimLevelBeforeStateChange;
+    applyControlsBrightness();
+  }
+}
+
 void processCommand(String commandString) {
   if(commandString.startsWith("t")) { //unixtime
-    unixTime = commandString.substring(1).toInt();
+    unixTime = commandString.substring(2).toInt();
   }
   else if(commandString.startsWith("w")) { // weather icon filename
-    weather = commandString.substring(1).c_str();
+    weather = commandString.substring(2).c_str();
   }
-  else if(commandString.startsWith("s")) { //status icon filename
-    statusIcon = commandString.substring(1).c_str();
+  else if(commandString.startsWith("i")) { //status icon filename
+    statusIcon = commandString.substring(2).c_str();
+  }
+  else if(commandString.startsWith("sb")) { //(sb=sleepmodeBrightness)controls brightness while sleep mode
+    sleepModeDimLevel = commandString.substring(2).toInt();
+  }
+  else if(commandString.startsWith("st")) { //(st=sleepModeToggle)enable/disable sleep mode
+    toggleSleepMode();
   }
   else if(commandString.startsWith("b+")) { //controls (LCD, RGB LED Buttons) brightness +
     if(controlsDimLevel > 0) {
